@@ -1,0 +1,7 @@
+black
+numpy
+scipy
+qutip
+
+git+git://github.com/andrewdarmawan/tncontract.git@master
+
