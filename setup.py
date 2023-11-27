@@ -11,5 +11,5 @@ setup(
     license='GNU General Public License v3.0',
     author='Tim Evans',
     author_email='',
-    description='Linette - a simple linear tensor network operators package'
+    description='Linette - Basic library for handling linear networks of Gaussian Random Tensors'
 )
