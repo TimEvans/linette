@@ -1,1 +1,1 @@
-linette
+Linette - Basic library for handling linear networks of Gaussian Random Tensors
