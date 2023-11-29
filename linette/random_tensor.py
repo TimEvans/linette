@@ -1,12 +1,10 @@
-from token import OP
-from typing import Tuple, Optional, Any
+from typing import Optional, Any
 import numpy as np
 from pydantic import (
     BaseModel,
-    ValidationError,
+    ConfigDict,
     field_validator,
     model_validator,
-    ConfigDict,
 )
 from scipy.stats import multivariate_normal
 
@@ -20,11 +18,7 @@ class GRVector(BaseModel):
     mean: np.ndarray
     cov: np.ndarray
     _rv: Optional[Any]
-
-    class Config:
-        """Pydantic config class"""
-
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     @field_validator("cov", mode="before")
     @classmethod
