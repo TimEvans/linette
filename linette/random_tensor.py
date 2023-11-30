@@ -6,19 +6,20 @@ from pydantic import (
     field_validator,
     model_validator,
 )
+from pydantic.dataclasses import dataclass
 from scipy.stats import multivariate_normal
 
-
+model_config = ConfigDict(arbitrary_types_allowed=True)
 # config = ConfigDict(arbitrary_types_allowed=True)
 
 
-class GRVector(BaseModel):
+@dataclass(config=model_config, slots=True)
+class GRVector:
     """Class for handling GR vectors. All random variables will be handled as vectors under the hood."""
 
     mean: np.ndarray
     cov: np.ndarray
-    _rv: Optional[Any]
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+    # _rv: Optional[Any]
 
     @field_validator("cov", mode="before")
     @classmethod
@@ -64,20 +65,24 @@ class GRVector(BaseModel):
     def check_dim_match(self) -> "GRVector":
         """Ensure that the covariance matrix and mean dimensions match"""
 
-        mdim = self.mean.shape[0]
+        mdim = np.squeeze(self.mean).shape[0]
         cshape = self.cov.shape
 
         if mdim != cshape[0]:
             raise ValueError(
                 f"Mean is {mdim}-dimensional and covariance is an {cshape[0]}x{cshape[1]}-matrix. These dimensions must match."
             )
-        self._rv = multivariate_normal(mean=self.mean.reshape(-1), cov=self.cov)
         return self
 
 
-# def main() -> None:
-#     """Main function"""
+def main() -> None:
+    """Main function"""
+    mean = np.arange(4) + 1
+    cov = np.diag(mean)
+    grv_dict = {"mean": mean, "cov": cov}
+    grv = GRVector(**grv_dict)
+    print(grv)
 
 
-# if __name__ == "__main__":
-#     main()
+if __name__ == "__main__":
+    main()
