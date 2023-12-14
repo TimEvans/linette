@@ -1,13 +1,16 @@
-from typing import Optional, Any
+from ast import Raise
+from typing import Optional, Any, Dict
 import numpy as np
 from pydantic import (
     BaseModel,
     ConfigDict,
+    Field,
     field_validator,
     model_validator,
 )
 from pydantic.dataclasses import dataclass
 from scipy.stats import multivariate_normal
+from tncontract import Tensor
 
 model_config = ConfigDict(arbitrary_types_allowed=True)
 # config = ConfigDict(arbitrary_types_allowed=True)
@@ -75,13 +78,49 @@ class GRVector:
         return self
 
 
+@dataclass(config=model_config, slots=True)
+class GRTensor:
+    mean: Tensor
+    cov: Tensor
+    grv: Optional[GRVector] = Field(default=None, init_var=False)
+
+    def __post_init__(self):
+        mean_vec = self.mean.copy()
+        labels = mean_vec.labels
+        cov_vec = self.cov.copy()
+
+        # vectorise tensor statistics
+        mean_vec.fuse_indices(labels, "i")
+        mean_vec_np = mean_vec.data
+        cov_vec.fuse_indices(labels, "i")
+        cov_vec.fuse_indices([l + "_" for l in labels], "_i")
+
+        # covariance will be self-adjoint so no danger of transposition errors here
+        cov_vec_np = cov_vec.data
+
+        self.grv = GRVector(mean=mean_vec_np, cov=cov_vec_np)
+
+    @model_validator(mode="before")
+    def check_tensor_labels(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Ensure that the labels from the mean and covariance match
+        i.e.
+        mean.labels = ["i0","i1",...,"iN"]
+        cov.labels = ["i0","i1",...,"iN","i0_","i1_",...,"iN_"]
+
+        where the input labels math to their corresponding output with a "_" suffix
+        """
+        labels = values.kwargs["mean"].labels
+        expected_labels = sorted(labels + [l + "_" for l in labels])
+        if sorted(values.kwargs["cov"].labels) != sorted(expected_labels):
+            raise ValueError(
+                f"Covariance labels must match the mean labels. if mean.labels=['i0','i1',...,'iN'] then cov.labels=['i0','i1',...,'iN','i0_','i1_',...,'iN_'] is expected."
+            )
+        return values
+
+
 def main() -> None:
     """Main function"""
-    mean = np.arange(4) + 1
-    cov = np.diag(mean)
-    grv_dict = {"mean": mean, "cov": cov}
-    grv = GRVector(**grv_dict)
-    print(grv)
 
 
 if __name__ == "__main__":
